@@ -14,11 +14,11 @@ public class JCFUserService implements UserService {
         data = new ArrayList<>();
 
         List<User> users = List.of(
-            new User("김사연", "yonnzzang@gmail.com","010-5543-9943"),
-            new User("박지은", "jieun@gmail.com","010-1234-1234"),
-            new User("강지원", "jiwon@gmail.com","010-2345-2345"),
-            new User("육선우", "sunwoo@gmail.com","010-3456-3456"),
-            new User("이진용", "jinyong@gmail.com", "010-4567-4567")
+                new User("김사연", "yonnzzang@gmail.com","010-5543-9943"),
+                new User("박지은", "jieun@gmail.com","010-1234-1234"),
+                new User("강지원", "jiwon@gmail.com","010-2345-2345"),
+                new User("육선우", "sunwoo@gmail.com","010-3456-3456"),
+                new User("이진용", "jinyong@gmail.com", "010-4567-4567")
         );
         data.addAll(users);
 
@@ -29,9 +29,7 @@ public class JCFUserService implements UserService {
         User user = new User(displayName, email, phoneNumber);
         data.add(user);
         return user;
-        }
     }
-
     @Override
     public User findById(UUID id){
         for (User user : data) {
@@ -59,11 +57,11 @@ public class JCFUserService implements UserService {
     @Override
     public boolean delete(UUID id) {
         User user = findById(id);
-        if (user == null) {
-            return false;
-        }
-        data.remove(user);
-        return true;
+        if (user == null) return false;
+        return data.remove(user);
     }
 
 }
+
+
+

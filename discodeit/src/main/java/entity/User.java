@@ -21,9 +21,9 @@ public class User {
     }
 
     public void update(String displayName, String email, String phoneNumber){
-        this.displayName = displayName;
-        this.email = email;
-        this.phoneNumber = phoneNumber;
+        if (displayName != null) this.displayName = displayName;
+        if (email != null) this.email = email;
+        if (phoneNumber != null) this.phoneNumber = phoneNumber;
         this.updatedAt = System.currentTimeMillis();
     }
 

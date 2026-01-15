@@ -17,7 +17,7 @@ public class Channel {
     }
 
     public void update(String name){
-        this.name = name;
+        if (name != null) this.name = name;
         this.updatedAt = System.currentTimeMillis();
     }
 

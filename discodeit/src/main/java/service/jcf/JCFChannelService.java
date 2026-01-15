@@ -26,7 +26,7 @@ public class JCFChannelService implements ChannelService {
     public Channel create(String name){
         Channel channel = new Channel(name);
         data.add(channel);
-        return true;
+        return channel;
     }
 
     @Override
@@ -40,27 +40,24 @@ public class JCFChannelService implements ChannelService {
 
     @Override
     public List<Channel> findAll(){
-        return data;
+        return new ArrayList<>(data);
     }
 
     @Override
     public Channel update(UUID id, String name) {
         Channel channel = findById(id);
-        if (channel == null) {
-            return false;
+        if (channel != null) {
+            channel.update(name);
         }
-        channel.update(name);
-        return true;
+        return channel;
     }
 
     @Override
     public boolean delete(UUID id) {
         Channel channel = findById(id);
-        if (channel == null) {
-            return false;
-        }
-        data.remove(channel);
-        return true;
+        if (channel == null) return false;
+        return data.remove(channel);
+
     }
 
 
