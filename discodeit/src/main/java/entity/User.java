@@ -61,6 +61,6 @@ public class User {
                 ", phoneNumber='" + this.phoneNumber + '\'' +
                 ", createdAt=" + this.createdAt +
                 ", updatedAt=" + this.updatedAt +
-                '}';
+                '}'; //출력해보기 예쁘게!
     }
 }

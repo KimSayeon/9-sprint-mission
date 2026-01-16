@@ -14,14 +14,14 @@ import java.util.UUID;
 
 public class JavaApplication {
     public static void main(String[] args) {
-    //서비스 초기화
-    UserService userService = new JCFUserService();
-    ChannelService channelService = new JCFChannelService();
-    MessageService messageService = new JCFMessageService();
-    //CRUD 테스트 호출
-    userCRUDTest(userService);
-    channelCRUDTest(channelService);
-    messageCRUDTest(messageService);
+        //서비스 초기화
+        UserService userService = new JCFUserService();
+        ChannelService channelService = new JCFChannelService();
+        MessageService messageService = new JCFMessageService();
+        //CRUD 테스트 호출
+        userCRUDTest(userService);
+        channelCRUDTest(channelService);
+        messageCRUDTest(messageService);
 
     }
     static void userCRUDTest(UserService userService){

@@ -14,13 +14,15 @@ public class JCFMessageService implements MessageService {
     private final List<Message> data;
 
     public JCFMessageService(){
-        data = new ArrayList<>();
+        data = new ArrayList<>(); //Message를 저장할 빈 통 준비
 
         UserService userService = new JCFUserService();
         ChannelService channelService = new JCFChannelService();
+        // 메세지는 유저랑 채널이 있어야 의미가 생김
 
         List<User> users = userService.findAll();
         List<Channel> channels = channelService.findAll();
+        //현재 존재하는 모든 유저,채널을 리스트로 가져옴 , 메세지 만들 때 필요
 
         List<Message> messages = List.of(
             new Message("좋아하는 음식: 딱히 없음",users.get(0).getId(),channels.get(3).getId()),
@@ -47,7 +49,8 @@ public class JCFMessageService implements MessageService {
 
     public List<Message> findAll(){
         return new ArrayList<>(data);
-    }
+    }   //서비스 내부 상태(data)를 외부에서 변경하지 못하게 하려고 new Array
+        // data는 JCF가 관리하는 내부 저장소
 
     public Message update(UUID id, String content){
         Message message = findById(id);
@@ -60,6 +63,6 @@ public class JCFMessageService implements MessageService {
     public boolean delete(UUID id){
         Message message = findById(id);
         if (message == null) return false;
-        return data.remove(message);
+        return data.remove(message); //true 가 return -> remove결과 = delete결과
     }
 }
