@@ -1,15 +1,17 @@
 package com.sprint.mission.discodeit;
 
 import com.sprint.mission.discodeit.entity.Channel;
-import com.sprint.mission.discodeit.entity.ChannelType;
 import com.sprint.mission.discodeit.entity.Message;
 import com.sprint.mission.discodeit.entity.User;
+import com.sprint.mission.discodeit.repository.ChannelRepository;
+import com.sprint.mission.discodeit.repository.MessageRepository;
+import com.sprint.mission.discodeit.repository.UserRepository;
 import com.sprint.mission.discodeit.service.ChannelService;
 import com.sprint.mission.discodeit.service.MessageService;
 import com.sprint.mission.discodeit.service.UserService;
-import com.sprint.mission.discodeit.service.file.FileChannelService;
-import com.sprint.mission.discodeit.service.file.FileMessageService;
-import com.sprint.mission.discodeit.service.file.FileUserService;
+import com.sprint.mission.discodeit.service.basic.BasicChannelService;
+import com.sprint.mission.discodeit.service.basic.BasicMessageService;
+import com.sprint.mission.discodeit.service.basic.BasicUserService;
 
 
 import java.util.List;
@@ -52,11 +54,11 @@ public class TestApplication {
         System.out.println("채널 삭제: " + foundChannelsAfterDelete.size());
     }
 
-    static void messageCRUDTest(MessageService messageService) {
+    static void messageCRUDTest(MessageService messageService, Channel channel, User user) {
         // 생성
-        UUID channelId = UUID.randomUUID();
-        UUID id = UUID.randomUUID();
-        Message message = messageService.create("안녕하세요.", channelId, id);  //????
+//        UUID channelId = UUID.randomUUID();
+//        UUID id = UUID.randomUUID();
+        Message message = messageService.create("안녕하세요.", channel.getId(), user.getId());  //????
         System.out.println("메시지 생성: " + message.getId());
         // 조회
         Message foundMessage = messageService.findById(message.getId());
@@ -88,19 +90,28 @@ public class TestApplication {
     }
 
     public static void main(String[] args) {
-        // 서비스 초기화
-        UserService userService = new FileUserService();
-        ChannelService channelService = new FileChannelService();
-        MessageService messageService = new FileMessageService(channelService, userService);
+
+//        UserService userService = new FileUserService();
+//        ChannelService channelService = new FileChannelService();
+//        MessageService messageService = new FileMessageService(channelService, userService);
+        UserRepository userRepository = new com.sprint.mission.discodeit.repository.jcf.JCFUserRepository();
+        ChannelRepository channelRepository = new com.sprint.mission.discodeit.repository.jcf.JCFChannelRepository();
+        MessageRepository messageRepository = new com.sprint.mission.discodeit.repository.jcf.JCFMessageRepository();
+
+        UserService userService = new BasicUserService(userRepository);
+        ChannelService channelService = new BasicChannelService(channelRepository);
+        MessageService messageService = new BasicMessageService(messageRepository);
+
+        // 셋업
+        Channel channel = setupChannel(channelService);
+        User user = setupUser(userService);
 
         //테스트
         userCRUDTest(userService);
         channelCRUDTest(channelService);
-        messageCRUDTest(messageService);
+        messageCRUDTest(messageService, channel, user);
 
-        // 셋업
-        User user = setupUser(userService);
-        Channel channel = setupChannel(channelService);
+
         // 테스트
         String content = "안녕하세요.";
         messageCreateTest(messageService, content, user, channel);
