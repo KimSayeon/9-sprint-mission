@@ -3,17 +3,18 @@ package com.sprint.mission.discodeit.service.basic;
 import com.sprint.mission.discodeit.entity.Message;
 import com.sprint.mission.discodeit.repository.MessageRepository;
 import com.sprint.mission.discodeit.service.MessageService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
 
+@Service
+@RequiredArgsConstructor
+
 public class BasicMessageService implements MessageService {
 
     private final MessageRepository messageRepository;
-
-    public BasicMessageService(MessageRepository messageRepository){
-        this.messageRepository = messageRepository;
-    }
 
     @Override
     public Message create(String content, UUID id, UUID channelId){
@@ -37,5 +38,5 @@ public class BasicMessageService implements MessageService {
     }
 
     @Override
-    public void delete(UUID id){ messageRepository.deleteById(id);}
+    public void deleteById(UUID id){ messageRepository.deleteById(id);}
 }

@@ -31,7 +31,7 @@ public class TestApplication {
         User updatedUser = userService.update(user.getId(), null, null, "woody5678");
         System.out.println("유저 수정: " + String.join("/", updatedUser.getDisplayName(), updatedUser.getEmail(), updatedUser.getPhoneNumber()));
         // 삭제
-        userService.delete(user.getId());
+        userService.deleteById(user.getId());
         List<User> foundUsersAfterDelete = userService.findAll();
         System.out.println("유저 삭제: " + foundUsersAfterDelete.size());
     }
@@ -49,7 +49,7 @@ public class TestApplication {
         Channel updatedChannel = channelService.update(channel.getId(), "공지사항");
         System.out.println("채널 수정: " + String.join("/", updatedChannel.getName()));
         // 삭제
-        channelService.delete(channel.getId());
+        channelService.deleteById(channel.getId());
         List<Channel> foundChannelsAfterDelete = channelService.findAll();
         System.out.println("채널 삭제: " + foundChannelsAfterDelete.size());
     }
@@ -69,7 +69,7 @@ public class TestApplication {
         Message updatedMessage = messageService.update(message.getId(), "반갑습니다.");
         System.out.println("메시지 수정: " + updatedMessage.getContent());
         // 삭재
-        messageService.delete(message.getId());
+        messageService.deleteById(message.getId());
         List<Message> foundMessagesAfterDelete = messageService.findAll();
         System.out.println("메시지 삭제: " + foundMessagesAfterDelete.size());
     }

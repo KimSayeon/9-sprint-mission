@@ -35,8 +35,13 @@ public class JCFMessageRepository implements MessageRepository {
     }
 
     @Override
-    public boolean existsById(UUID id) {
-        return data.containsKey(id);
+    public void deleteAllByChannelId(UUID channelId){
+        data.values().removeIf(message -> message.getChannelId().equals(channelId));
+    }
+
+    @Override
+    public void deleteByUserId(UUID userId){
+        data.values().removeIf(message -> message.getUserId().equals(userId));
     }
 
     // update 필요하면 @Override 없이 일반 메서드로 추가

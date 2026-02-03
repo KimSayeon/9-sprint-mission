@@ -2,10 +2,12 @@ package com.sprint.mission.discodeit.repository.file;
 
 import com.sprint.mission.discodeit.entity.Channel;
 import com.sprint.mission.discodeit.repository.ChannelRepository;
+import org.springframework.stereotype.Repository;
 
 import java.io.*;
 import java.util.*;
 
+@Repository
 public class FileChannelRepository implements ChannelRepository {
     private static final String FILE_PATH = "channels.dat";
     private Map<UUID, Channel> data = new HashMap<>();
@@ -29,14 +31,11 @@ public class FileChannelRepository implements ChannelRepository {
     }
 
     @Override
-    public void deleteById(UUID id){
-        data.remove(id);
-        saveToFile();
-    }
-
-    @Override
-    public boolean existsById(UUID id){
-        return data.containsKey(id);
+    public void deleteById(UUID targetId){
+        if (data.containsKey(targetId)){
+            data.remove(targetId);
+            saveToFile();
+        }
     }
 
     public Channel update(Channel channel){
@@ -57,7 +56,7 @@ public class FileChannelRepository implements ChannelRepository {
     private void saveToFile() {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_PATH))){
             oos.writeObject(data);
-        } catch (IOException e) {
+        } catch (IOException e) {  // user파일은 saveTiFile 내용 없는데 어떻게 고쳐야할지
             e.printStackTrace();
         }
     }

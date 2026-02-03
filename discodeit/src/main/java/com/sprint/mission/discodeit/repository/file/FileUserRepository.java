@@ -2,10 +2,12 @@ package com.sprint.mission.discodeit.repository.file;
 
 import com.sprint.mission.discodeit.entity.User;
 import com.sprint.mission.discodeit.repository.UserRepository;
+import org.springframework.stereotype.Repository;
 
 import java.io.*;
 import java.util.*;
 
+@Repository
 public class FileUserRepository implements UserRepository {
     private static final String FILE_PATH = "users.dat";
     private Map<UUID, User> data = new HashMap<>();
@@ -35,15 +37,13 @@ public class FileUserRepository implements UserRepository {
         saveToFile();
         return user;
     }
-    @Override
-    public boolean existsById(UUID id){
-        return data.containsKey(id);
-    }
 
     @Override
     public void deleteById(UUID id){
-        data.remove(id);
-        saveToFile();
+        if (data.containsKey(id)){
+            data.remove(id);
+            saveToFile();
+        }
     }
 
     private void loadFromFile(){
@@ -52,15 +52,31 @@ public class FileUserRepository implements UserRepository {
         try(ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))){
             data = (Map<UUID, User>) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+            System.out.println("데이터 로드 중 오류 발생: " + e.getMessage());
         }
     }
+
     private void saveToFile(){
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_PATH))){
             oos.writeObject(data);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("데이터 저장 중 오류 발생: " + e.getMessage());
+
         }
+    }
+
+    @Override
+    public Optional<User> findByDisplayName(String displayName) {
+        return findAll().stream()
+                .filter(user -> displayName.equals(user.getDisplayName()))
+                .findFirst();
+    }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return findAll().stream()
+                .filter(user -> email.equals(user.getEmail()))
+                .findFirst();
     }
 
 }

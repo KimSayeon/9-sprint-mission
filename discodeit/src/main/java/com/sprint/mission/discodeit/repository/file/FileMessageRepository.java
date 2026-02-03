@@ -2,10 +2,18 @@ package com.sprint.mission.discodeit.repository.file;
 
 import com.sprint.mission.discodeit.entity.Message;
 import com.sprint.mission.discodeit.repository.MessageRepository;
+import org.springframework.stereotype.Repository;
 
 import java.io.*;
 import java.util.*;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Stream;
 
+@Repository
 public class FileMessageRepository implements MessageRepository {
 
     private static final String FILE_PATH = "messages.dat";
@@ -34,14 +42,9 @@ public class FileMessageRepository implements MessageRepository {
     }
 
     @Override
-    public void deleteById(UUID id) {
-        data.remove(id);
+    public void deleteById(UUID userId) {
+        data.remove(userId);
         saveToFile();
-    }
-
-    @Override
-    public boolean existsById(UUID id) {
-        return data.containsKey(id);
     }
 
     // update 필요하면 그대로 두고 @Override 제거
@@ -72,5 +75,18 @@ public class FileMessageRepository implements MessageRepository {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void deleteAllByChannelId(UUID channelId){
+        //메모리(Map)에서 해당 채널 ID를 가진 메세지를 다 지움
+        data.values().removeIf(message->message.getChannelId().equals(channelId));
+        saveToFile();
+    }
+
+    @Override
+    public void deleteByUserId(UUID userId){
+        data.values().removeIf(message -> message.getUserId().equals(userId));
+        saveToFile();
     }
 }

@@ -22,11 +22,6 @@ public class JCFMessageService implements MessageService {
         this.channelService = channelService;
         data = new ArrayList<>(); //Message를 저장할 빈 통 준비
 
-/*
-        UserService userService = new JCFUserService();
-        ChannelService channelService = new JCFChannelService();
-        // 메세지는 유저랑 채널이 있어야 의미가 생김
-*/
         List<User> users = userService.findAll();
         List<Channel> channels = channelService.findAll();
         //현재 존재하는 모든 유저,채널을 리스트로 가져옴 , 메세지 만들 때 필요
@@ -68,7 +63,7 @@ public class JCFMessageService implements MessageService {
         return message;
     }
 
-    public void delete(UUID id){
+    public void deleteById(UUID id){
         Message message = findById(id);
         if (message == null){
             throw new NoSuchElementException("Message not found");
