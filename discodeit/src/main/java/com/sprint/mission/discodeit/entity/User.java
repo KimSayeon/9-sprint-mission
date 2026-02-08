@@ -20,24 +20,24 @@ public class User implements Serializable {
     private String email;
     private String password;
     private String phoneNumber;
-    private String profileImageUrl;
+    private UUID profileImageId;
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
 
-    public  User(String displayName, String email, String password, String phoneNumber, String profileImageUrl){
+    public  User(String displayName, String email, String password, String phoneNumber, UUID profileImageId){
         this.displayName = displayName;
         this.email = email;
         this.password = password;
         this.phoneNumber = phoneNumber;
-        this.profileImageUrl = profileImageUrl;
+        this.profileImageId = profileImageId;
     }
 
-    public void update(String displayName, String email, String password, String phoneNumber, String profileImageUrl){
+    public void update(String displayName, String email, String password, String phoneNumber, UUID profileImageId){
         if (displayName != null) this.displayName = displayName;
         if (email != null) this.email = email;
         if (password != null) this.password = password;
         if (phoneNumber != null) this.phoneNumber = phoneNumber;
-        if (profileImageUrl != null) this.profileImageUrl = profileImageUrl;
+        if (profileImageId != null) this.profileImageId = profileImageId;
         this.updatedAt = Instant.now();
     }
 

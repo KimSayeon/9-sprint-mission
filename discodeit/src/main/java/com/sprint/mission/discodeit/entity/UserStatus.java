@@ -15,6 +15,7 @@ public class UserStatus implements Serializable {
 
     private final UUID id = UUID.randomUUID();
     private UUID userId;
+
     private Instant lastLogin = Instant.now();
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
@@ -24,10 +25,12 @@ public class UserStatus implements Serializable {
     }
 
     public boolean isOnline(){
+
         return lastLogin.isAfter(Instant.now().minus(5, ChronoUnit.MINUTES));
     }
 
     public void updateLastLogin(){
+        Instant now = Instant.now();
         this.lastLogin = Instant.now();
         this.updatedAt = Instant.now();
     }

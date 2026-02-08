@@ -45,13 +45,8 @@ public class FileChannelRepository implements ChannelRepository {
     }
 
     private void loadFromFile(){
-        File file = new File(FILE_PATH);
-        if (!file.exists()) return;
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))){
-            data = (Map<UUID, Channel>) ois.readObject();
-        } catch (IOException | ClassNotFoundException e){
-            e.printStackTrace();
-        }
+       this.data = new HashMap<>();
+        System.out.println("제발 오류 안나게 해주세요");
     }
     private void saveToFile() {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_PATH))){

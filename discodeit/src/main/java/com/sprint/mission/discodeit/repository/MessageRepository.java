@@ -12,4 +12,4 @@ public interface MessageRepository {
     List<Message> findAll();
     void deleteById(UUID id);
     void deleteAllByChannelId(UUID channelId);
-    void deleteByUserId(UUID userId);
+    void deleteByUserId(UUID userId);}

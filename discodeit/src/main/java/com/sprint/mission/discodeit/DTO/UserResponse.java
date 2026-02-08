@@ -9,15 +9,17 @@ public record UserResponse (
         String displayName,
         String email,
         String phoneNumber,
-        String profileImageUrl
+        UUID profileImageId,
+        boolean isOnline
 ){
-    public static UserResponse from(User user){
+    public static UserResponse from(User user, boolean isOnline){
         return new UserResponse(
                 user.getId(),
                 user.getDisplayName(),
                 user.getEmail(),
                 user.getPhoneNumber(),
-                user.getProfileImageUrl()
+                user.getProfileImageId(),
+                isOnline
         );
     }
 }

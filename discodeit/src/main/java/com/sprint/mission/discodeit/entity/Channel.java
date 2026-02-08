@@ -24,6 +24,12 @@ public class Channel implements Serializable {
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
+    //Private 채널 생성자. 파라미터 없이 호출 시 name 이 null 인 상태로 채널 생성
+    public Channel(){
+        this.name = null;
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
 
     public void update(String name){
         if (name != null) this.name = name;

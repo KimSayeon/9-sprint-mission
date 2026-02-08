@@ -2,12 +2,14 @@ package com.sprint.mission.discodeit.repository.file;
 
 import com.sprint.mission.discodeit.entity.User;
 import com.sprint.mission.discodeit.repository.UserRepository;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
 import java.io.*;
 import java.util.*;
 
 @Repository
+@Primary
 public class FileUserRepository implements UserRepository {
     private static final String FILE_PATH = "users.dat";
     private Map<UUID, User> data = new HashMap<>();
@@ -32,11 +34,11 @@ public class FileUserRepository implements UserRepository {
         return new ArrayList<>(data.values());
     }
 
-    public User update(User user){
-        data.put(user.getId(),user);
-        saveToFile();
-        return user;
-    }
+//    public User update(User user){
+//        data.put(user.getId(),user);
+//        saveToFile();
+//        return user;
+//    }
 
     @Override
     public void deleteById(UUID id){

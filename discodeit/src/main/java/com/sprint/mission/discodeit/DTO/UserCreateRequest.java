@@ -5,5 +5,5 @@ public record UserCreateRequest (
         String email,
         String password,
         String phoneNumber,
-        String profileImageUrl
+        BinaryContentCreateRequest profileImage
 ){}
