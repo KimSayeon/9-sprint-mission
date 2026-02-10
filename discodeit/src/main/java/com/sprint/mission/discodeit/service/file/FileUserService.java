@@ -1,3 +1,4 @@
+/*
 package com.sprint.mission.discodeit.service.file;
 
 
@@ -12,6 +13,8 @@ import com.sprint.mission.discodeit.repository.ReadStatusRepository;
 import com.sprint.mission.discodeit.repository.UserRepository;
 import com.sprint.mission.discodeit.repository.UserStatusRepository;
 import com.sprint.mission.discodeit.service.UserService;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -26,30 +29,26 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 @Service
-
+@RequiredArgsConstructor
 public class FileUserService implements UserService {
-    private final Path DIRECTORY;
+    private Path DIRECTORY;
     private final String EXTENSION = ".ser";
 
+    @Qualifier("fileUserStatusRepository")
     private final UserStatusRepository userStatusRepository;
+    @Qualifier("fileBinaryContentRepository")
     private final BinaryContentRepository binaryContentRepository; //사진 저장하려면 사진 저장소 필요
+    @Qualifier("fileReadStatusRepository")
     private final ReadStatusRepository readStatusRepository;
 
-    public FileUserService(
-            @Qualifier("fileUserStatusRepository") UserStatusRepository userStatusRepository,
-            @Qualifier("fileBinaryContentRepository") BinaryContentRepository binaryContentRepository,
-            @Qualifier("fileReadStatusRepository") ReadStatusRepository readStatusRepository){
-
-        this.userStatusRepository = userStatusRepository;
-        this.binaryContentRepository = binaryContentRepository; //주입받기
-        this.readStatusRepository = readStatusRepository;
-
-        this.DIRECTORY = Paths.get(System.getProperty("user.dir"), "file-data-map", User.class.getSimpleName());
+    @PostConstruct
+    public void init() {
+        this.DIRECTORY = Paths.get(System.getProperty("user.dir"),"file-data-map", User.class.getSimpleName());
         if (Files.notExists(DIRECTORY)) {
             try {
                 Files.createDirectories(DIRECTORY);
             } catch (IOException e) {
-                throw new RuntimeException("저장 디렉토리를 생성할 수 없습니다." , e);
+                throw new RuntimeException("저장 디렉토리를 생성할 수 없습니다.", e);
             }
         }
     }
@@ -208,7 +207,7 @@ public class FileUserService implements UserService {
                     .filter(user -> displayName.equals(user.getDisplayName()))
                     .map(this::convertToResponse)
                     .findFirst();
-        } catch (Exception e) {
+        } catch (IOException e) {
             return Optional.empty();
         }
     }
@@ -228,3 +227,4 @@ public class FileUserService implements UserService {
     }
 
 }
+*/

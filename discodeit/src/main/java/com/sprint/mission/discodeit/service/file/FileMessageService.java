@@ -1,3 +1,4 @@
+/*
 package com.sprint.mission.discodeit.service.file;
 
 import com.sprint.mission.discodeit.DTO.MessageCreateRequest;
@@ -9,6 +10,7 @@ import com.sprint.mission.discodeit.service.BinaryContentService;
 import com.sprint.mission.discodeit.service.ChannelService;
 import com.sprint.mission.discodeit.service.MessageService;
 import com.sprint.mission.discodeit.service.UserService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -24,8 +26,9 @@ import java.util.stream.Stream;
 @Service
 public class FileMessageService implements MessageService {
 
-    private final Path DIRECTORY;
+    private Path DIRECTORY;
     private final String EXTENSION = ".ser";
+    @Qualifier("fileBinaryContentRepository")
     private final BinaryContentService binaryContentService;
 
     public FileMessageService(BinaryContentService binaryContentService){
@@ -136,3 +139,4 @@ public class FileMessageService implements MessageService {
         );
     }
 }
+*/
