@@ -1,38 +1,47 @@
 package com.sprint.mission.discodeit.entity;
 
+
 import lombok.Getter;
-import lombok.ToString;
 
 import java.io.Serializable;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Getter
-@ToString
 public class UserStatus implements Serializable {
+
     private static final long serialVersionUID = 1L;
-
-    private final UUID id = UUID.randomUUID();
+    private UUID id;
+    private Instant createdAt;
+    private Instant updatedAt;
+    //
     private UUID userId;
+    private Instant lastActiveAt;
 
-    private Instant lastLogin = Instant.now();
-    private Instant createdAt = Instant.now();
-    private Instant updatedAt = Instant.now();
-
-    public UserStatus(UUID userId){
+    public UserStatus(UUID userId, Instant lastActiveAt) {
+        this.id = UUID.randomUUID();
+        this.createdAt = Instant.now();
+        //
         this.userId = userId;
+        this.lastActiveAt = lastActiveAt;
     }
 
-    public boolean isOnline(){
+    public void update(Instant lastActiveAt) {
+        boolean anyValueUpdated = false;
+        if (lastActiveAt != null && !lastActiveAt.equals(this.lastActiveAt)) {
+            this.lastActiveAt = lastActiveAt;
+            anyValueUpdated = true;
+        }
 
-        return lastLogin.isAfter(Instant.now().minus(5, ChronoUnit.MINUTES));
+        if (anyValueUpdated) {
+            this.updatedAt = Instant.now();
+        }
     }
 
-    public void updateLastLogin(){
-        Instant now = Instant.now();
-        this.lastLogin = Instant.now();
-        this.updatedAt = Instant.now();
-    }
+    public Boolean isOnline() {
+        Instant instantFiveMinutesAgo = Instant.now().minus(Duration.ofMinutes(5));
 
+        return lastActiveAt.isAfter(instantFiveMinutesAgo);
+    }
 }

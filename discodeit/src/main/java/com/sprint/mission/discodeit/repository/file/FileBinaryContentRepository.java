@@ -1,95 +1,129 @@
 package com.sprint.mission.discodeit.repository.file;
 
+
 import com.sprint.mission.discodeit.entity.BinaryContent;
 import com.sprint.mission.discodeit.repository.BinaryContentRepository;
-import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Stream;
 
-// [수정 1] @Service 삭제: 얘는 저장소니까 @Repository가 맞습니다. (Spring 족보 정리)
+@ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
 @Repository
 public class FileBinaryContentRepository implements BinaryContentRepository {
 
-    // [수정 2] 경로 통일: 다른 파일들(User, Channel)처럼 'file-data-map' 폴더 안에 저장되도록 수정
-    private Path DIRECTORY;
-    private Path FILE_PATH;
+    private final Path DIRECTORY;
+    private final String EXTENSION = ".ser";
+    private final FileLockProvider fileLockProvider;
 
-    private Map<UUID, BinaryContent> data = new HashMap<>();
-
-    // [수정 3] 초기화 로직: 생성자 대신 @PostConstruct 사용 (Spring이 준비되면 실행)
-    @PostConstruct
-    public void init() {
-        this.DIRECTORY = Paths.get(System.getProperty("user.dir"), "file-data-map", "BinaryContent");
-        this.FILE_PATH = DIRECTORY.resolve("binary_contents.dat");
-
-        // 폴더가 없으면 만들기
+    public FileBinaryContentRepository(
+            @Value("${discodeit.repository.file-directory:data}") String fileDirectory,
+            FileLockProvider fileLockProvider
+    ) {
+        this.DIRECTORY = Paths.get(System.getProperty("user.dir"), fileDirectory,
+                BinaryContent.class.getSimpleName());
         if (Files.notExists(DIRECTORY)) {
             try {
                 Files.createDirectories(DIRECTORY);
             } catch (IOException e) {
-                throw new RuntimeException("저장 디렉토리를 생성할 수 없습니다.", e);
+                throw new RuntimeException(e);
             }
         }
+        this.fileLockProvider = fileLockProvider;
+    }
 
-        loadFromFile();
+    private Path resolvePath(UUID id) {
+        return DIRECTORY.resolve(id + EXTENSION);
     }
 
     @Override
-    public BinaryContent save(BinaryContent binaryContent){
-        data.put(binaryContent.getId(), binaryContent);
-        saveToFile();
+    public BinaryContent save(BinaryContent binaryContent) {
+        Path path = resolvePath(binaryContent.getId());
+        ReentrantLock lock = fileLockProvider.getLock(path);
+        lock.lock();
+
+        try (
+                FileOutputStream fos = new FileOutputStream(path.toFile());
+                ObjectOutputStream oos = new ObjectOutputStream(fos)
+        ) {
+            oos.writeObject(binaryContent);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
         return binaryContent;
     }
 
     @Override
     public Optional<BinaryContent> findById(UUID id) {
-        return Optional.ofNullable(data.get(id));
+        BinaryContent binaryContentNullable = null;
+        Path path = resolvePath(id);
+        ReentrantLock lock = fileLockProvider.getLock(path);
+        lock.lock();
+        if (Files.exists(path)) {
+            try (
+                    FileInputStream fis = new FileInputStream(path.toFile());
+                    ObjectInputStream ois = new ObjectInputStream(fis)
+            ) {
+                binaryContentNullable = (BinaryContent) ois.readObject();
+            } catch (IOException | ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            } finally {
+                lock.unlock();
+            }
+        }
+        return Optional.ofNullable(binaryContentNullable);
     }
 
     @Override
-    public List<BinaryContent> findAll() {
-        return new ArrayList<>(data.values());
-    }
-
-    @Override
-    public void deleteById(UUID id){
-        if (data.containsKey(id)) {
-            data.remove(id);
-            saveToFile();
+    public List<BinaryContent> findAllByIdIn(List<UUID> ids) {
+        try (Stream<Path> paths = Files.list(DIRECTORY)) {
+            return paths
+                    .filter(path -> path.toString().endsWith(EXTENSION))
+                    .map(path -> {
+                        ReentrantLock lock = fileLockProvider.getLock(path);
+                        lock.lock();
+                        try (
+                                FileInputStream fis = new FileInputStream(path.toFile());
+                                ObjectInputStream ois = new ObjectInputStream(fis)
+                        ) {
+                            return (BinaryContent) ois.readObject();
+                        } catch (IOException | ClassNotFoundException e) {
+                            throw new RuntimeException(e);
+                        } finally {
+                            lock.unlock();
+                        }
+                    })
+                    .filter(content -> ids.contains(content.getId()))
+                    .toList();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
-    public List<BinaryContent> findAllByIdIn(Collection<UUID> ids){
-        return findAll().stream()
-                .filter(content -> ids.contains(content.getId()))
-                .collect(Collectors.toList());
+    public boolean existsById(UUID id) {
+        Path path = resolvePath(id);
+        return Files.exists(path);
     }
 
-    private void saveToFile(){
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_PATH.toFile()))){
-            oos.writeObject(data);
-        } catch (IOException e){
-            // [수정 4] 에러 출력 대신 런타임 예외로 던져서 문제 발생 시 바로 알 수 있게 변경
-            throw new RuntimeException("파일 저장 중 오류 발생", e);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private void loadFromFile(){
-        if (Files.notExists(FILE_PATH)) return;
-
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE_PATH.toFile()))){
-            data = (Map<UUID, BinaryContent>) ois.readObject();
-        } catch (IOException | ClassNotFoundException e){
-            // 파일이 깨졌거나 읽을 수 없으면 빈 맵으로 시작
-            data = new HashMap<>();
+    @Override
+    public void deleteById(UUID id) {
+        Path path = resolvePath(id);
+        try {
+            Files.delete(path);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

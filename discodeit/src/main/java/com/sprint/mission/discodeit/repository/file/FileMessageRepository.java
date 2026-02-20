@@ -1,9 +1,10 @@
 package com.sprint.mission.discodeit.repository.file;
 
+
 import com.sprint.mission.discodeit.entity.Message;
 import com.sprint.mission.discodeit.repository.MessageRepository;
-import jakarta.annotation.PostConstruct;
-import org.springframework.context.annotation.Primary;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.io.*;
@@ -13,95 +14,122 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
+@ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
 @Repository
-@Primary
 public class FileMessageRepository implements MessageRepository {
 
-    private Path DIRECTORY;
+    private final Path DIRECTORY;
     private final String EXTENSION = ".ser";
+    private final FileLockProvider fileLockProvider;
 
-    @PostConstruct
-    public void init() {
-        this.DIRECTORY = Paths.get(System.getProperty("user.dir"), "file-data-map", Message.class.getSimpleName());
+    public FileMessageRepository(
+            @Value("${discodeit.repository.file-directory:data}") String fileDirectory,
+            FileLockProvider fileLockProvider
+    ) {
+        this.DIRECTORY = Paths.get(System.getProperty("user.dir"), fileDirectory,
+                Message.class.getSimpleName());
         if (Files.notExists(DIRECTORY)) {
             try {
                 Files.createDirectories(DIRECTORY);
             } catch (IOException e) {
-                throw new RuntimeException("저장 디렉토리를 생성할 수 없습니다.", e);
+                throw new RuntimeException(e);
             }
         }
+        this.fileLockProvider = fileLockProvider;
     }
 
     private Path resolvePath(UUID id) {
-        return DIRECTORY.resolve(id.toString() + EXTENSION);
-    }
-
-    private Optional<Message> readMessageFile(Path path) {
-        if (!Files.exists(path)) return Optional.empty();
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(path.toFile()))) {
-            return Optional.ofNullable((Message) ois.readObject());
-        } catch (IOException | ClassNotFoundException e) {
-            return Optional.empty();
-        }
-    }
-
-    private void saveMessageFile(Message message) {
-        Path path = resolvePath(message.getId());
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(path.toFile()))) {
-            oos.writeObject(message);
-        } catch (IOException e) {
-            throw new RuntimeException("메세지 정보를 저장하는 중 오류가 발생했습니다.", e);
-        }
+        return DIRECTORY.resolve(id + EXTENSION);
     }
 
     @Override
     public Message save(Message message) {
-        saveMessageFile(message);
+        Path path = resolvePath(message.getId());
+        ReentrantLock lock = fileLockProvider.getLock(path);
+        lock.lock();
+
+        try (
+                FileOutputStream fos = new FileOutputStream(path.toFile());
+                ObjectOutputStream oos = new ObjectOutputStream(fos)
+        ) {
+            oos.writeObject(message);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
         return message;
     }
 
     @Override
     public Optional<Message> findById(UUID id) {
-        return readMessageFile(resolvePath(id));
+        Message messageNullable = null;
+        Path path = resolvePath(id);
+        ReentrantLock lock = fileLockProvider.getLock(path);
+        lock.lock();
+        if (Files.exists(path)) {
+            try (
+                    FileInputStream fis = new FileInputStream(path.toFile());
+                    ObjectInputStream ois = new ObjectInputStream(fis)
+            ) {
+                messageNullable = (Message) ois.readObject();
+            } catch (IOException | ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            } finally {
+                lock.unlock();
+            }
+        }
+        return Optional.ofNullable(messageNullable);
     }
 
     @Override
-    public List<Message> findAll() {
+    public List<Message> findAllByChannelId(UUID channelId) {
         try (Stream<Path> paths = Files.list(DIRECTORY)) {
             return paths
                     .filter(path -> path.toString().endsWith(EXTENSION))
-                    .map(this::readMessageFile)
-                    .flatMap(Optional::stream)
+                    .map(path -> {
+                        ReentrantLock lock = fileLockProvider.getLock(path);
+                        lock.lock();
+                        try (
+                                FileInputStream fis = new FileInputStream(path.toFile());
+                                ObjectInputStream ois = new ObjectInputStream(fis)
+                        ) {
+                            return (Message) ois.readObject();
+                        } catch (IOException | ClassNotFoundException e) {
+                            throw new RuntimeException(e);
+                        } finally {
+                            lock.unlock();
+                        }
+                    })
+                    .filter(message -> message.getChannelId().equals(channelId))
                     .toList();
         } catch (IOException e) {
-            throw new RuntimeException("전체 메세지 목록을 읽어오는 중 오류가 발생했습니다.", e);
+            throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public boolean existsById(UUID id) {
+        Path path = resolvePath(id);
+        return Files.exists(path);
     }
 
     @Override
     public void deleteById(UUID id) {
+        Path path = resolvePath(id);
         try {
-            Files.deleteIfExists(resolvePath(id));
+            Files.delete(path);
         } catch (IOException e) {
-            throw new RuntimeException("메세지 삭제 실패: " + id, e);
+            throw new RuntimeException(e);
         }
     }
 
-    // [누락된 기능 추가 1] 채널 삭제 시 해당 채널 메시지 다 삭제
     @Override
     public void deleteAllByChannelId(UUID channelId) {
-        findAll().stream()
-                .filter(message -> message.getChannelId().equals(channelId))
-                .forEach(message -> deleteById(message.getId()));
-    }
-
-    // [누락된 기능 추가 2] 유저 삭제 시 해당 유저가 쓴 메시지 다 삭제 (이게 없어서 에러 났음!)
-    @Override
-    public void deleteByUserId(UUID userId) {
-        findAll().stream()
-                .filter(message -> message.getUserId().equals(userId))
-                .forEach(message -> deleteById(message.getId()));
+        this.findAllByChannelId(channelId)
+                .forEach(message -> this.deleteById(message.getId()));
     }
 }

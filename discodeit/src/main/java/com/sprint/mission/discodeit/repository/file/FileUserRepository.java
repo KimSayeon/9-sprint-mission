@@ -1,68 +1,98 @@
 package com.sprint.mission.discodeit.repository.file;
+
+
 import com.sprint.mission.discodeit.entity.User;
 import com.sprint.mission.discodeit.repository.UserRepository;
-import jakarta.annotation.PostConstruct;
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Repository;
-
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Repository;
 
+@ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
 @Repository
-@Primary
 public class FileUserRepository implements UserRepository {
-    private Path DIRECTORY;
-    private final String EXTENSION = ".ser";
 
-    @PostConstruct
-    public void init() {
-        this.DIRECTORY = Paths.get(System.getProperty("user.dir"), "file-data-map", User.class.getSimpleName());
+    private final Path DIRECTORY;
+    private final String EXTENSION = ".ser";
+    private final FileLockProvider fileLockProvider;
+
+    public FileUserRepository(
+            @Value("${discodeit.repository.file-directory:data}") String fileDirectory,
+            FileLockProvider fileLockProvider
+    ) {
+        this.DIRECTORY = Paths.get(System.getProperty("user.dir"), fileDirectory,
+                User.class.getSimpleName());
         if (Files.notExists(DIRECTORY)) {
             try {
                 Files.createDirectories(DIRECTORY);
             } catch (IOException e) {
-                throw new RuntimeException("저장 디렉토리를 생성할 수 없습니다.", e);
+                throw new RuntimeException(e);
             }
         }
+        this.fileLockProvider = fileLockProvider;
     }
 
     private Path resolvePath(UUID id) {
-        return DIRECTORY.resolve(id.toString() + EXTENSION);
-    }
-
-    private Optional<User> readUserFile(Path path) {
-        if (!Files.exists(path)) return Optional.empty();
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(path.toFile()))) {
-            return Optional.ofNullable((User) ois.readObject());
-        } catch (IOException | ClassNotFoundException e) {
-            return Optional.empty();
-        }
-    }
-
-    private void saveUserFile(User user) {
-        Path path = resolvePath(user.getId());
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(path.toFile()))) {
-            oos.writeObject(user);
-        } catch (IOException e) {
-            throw new RuntimeException("유저 정보를 저장하는 중 오류가 발생했습니다.", e);
-        }
+        return DIRECTORY.resolve(id + EXTENSION);
     }
 
     @Override
     public User save(User user) {
-        saveUserFile(user);
+        Path path = resolvePath(user.getId());
+        ReentrantLock lock = fileLockProvider.getLock(path);
+        lock.lock();
+
+        try (
+                FileOutputStream fos = new FileOutputStream(path.toFile());
+                ObjectOutputStream oos = new ObjectOutputStream(fos)
+        ) {
+            oos.writeObject(user);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
         return user;
     }
 
     @Override
     public Optional<User> findById(UUID id) {
-        return readUserFile(resolvePath(id));
+        User userNullable = null;
+        Path path = resolvePath(id);
+        ReentrantLock lock = fileLockProvider.getLock(path);
+        lock.lock();
+        if (Files.exists(path)) {
+            try (
+                    FileInputStream fis = new FileInputStream(path.toFile());
+                    ObjectInputStream ois = new ObjectInputStream(fis)
+            ) {
+                userNullable = (User) ois.readObject();
+            } catch (IOException | ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            } finally {
+                lock.unlock();
+            }
+        }
+        return Optional.ofNullable(userNullable);
+    }
+
+    @Override
+    public Optional<User> findByUsername(String username) {
+        return this.findAll().stream()
+                .filter(user -> user.getUsername().equals(username))
+                .findFirst();
     }
 
     @Override
@@ -70,49 +100,51 @@ public class FileUserRepository implements UserRepository {
         try (Stream<Path> paths = Files.list(DIRECTORY)) {
             return paths
                     .filter(path -> path.toString().endsWith(EXTENSION))
-                    .map(this::readUserFile)
-                    .flatMap(Optional::stream)
+                    .map(path -> {
+                        ReentrantLock lock = fileLockProvider.getLock(path);
+                        lock.lock();
+                        try (
+                                FileInputStream fis = new FileInputStream(path.toFile());
+                                ObjectInputStream ois = new ObjectInputStream(fis)
+                        ) {
+                            return (User) ois.readObject();
+                        } catch (IOException | ClassNotFoundException e) {
+                            throw new RuntimeException(e);
+                        }  finally {
+                            lock.unlock();
+                        }
+                    })
                     .toList();
         } catch (IOException e) {
-            throw new RuntimeException("전체 유저 목록을 읽어오는 중에 문제가 생겼습니다.", e);
+            throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public boolean existsById(UUID id) {
+        Path path = resolvePath(id);
+        return Files.exists(path);
     }
 
     @Override
     public void deleteById(UUID id) {
         Path path = resolvePath(id);
         try {
-            Files.deleteIfExists(path);
+            Files.delete(path);
         } catch (IOException e) {
-            throw new RuntimeException("유저 정보를 삭제하는 중 오류가 발생했습니다. ID: " + id);
+            throw new RuntimeException(e);
         }
     }
 
     @Override
-    public Optional<User> findByDisplayName(String displayName) {
-        try (Stream<Path> paths = Files.list(DIRECTORY)) {
-            return paths
-                    .filter(path -> path.toString().endsWith(EXTENSION))
-                    .map(this::readUserFile)
-                    .flatMap(Optional::stream)
-                    .filter(user -> displayName.equals(user.getDisplayName()))
-                    .findFirst();
-        } catch (IOException e) {
-            return Optional.empty();
-        }
+    public boolean existsByEmail(String email) {
+        return this.findAll().stream()
+                .anyMatch(user -> user.getEmail().equals(email));
     }
 
     @Override
-    public Optional<User> findByEmail(String email) {
-        try (Stream<Path> paths = Files.list(DIRECTORY)) {
-            return paths
-                    .filter(path -> path.toString().endsWith(EXTENSION))
-                    .map(this::readUserFile)
-                    .flatMap(Optional::stream)
-                    .filter(user -> email.equals(user.getEmail()))
-                    .findFirst();
-        } catch (IOException e) {
-            return Optional.empty();
-        }
+    public boolean existsByUsername(String username) {
+        return this.findAll().stream()
+                .anyMatch(user -> user.getUsername().equals(username));
     }
 }
