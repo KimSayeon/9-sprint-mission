@@ -24,9 +24,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class FileUserRepository implements UserRepository {
 
-    private final Path DIRECTORY;
+    private final Path DIRECTORY;  //path -> 파일이 어디에 있는지 알려주는 주소
     private final String EXTENSION = ".ser";
-    private final FileLockProvider fileLockProvider;
+    private final FileLockProvider fileLockProvider; //열쇠 관리소
 
     public FileUserRepository(
             @Value("${discodeit.repository.file-directory:data}") String fileDirectory,
@@ -52,11 +52,11 @@ public class FileUserRepository implements UserRepository {
     public User save(User user) {
         Path path = resolvePath(user.getId());
         ReentrantLock lock = fileLockProvider.getLock(path);
-        lock.lock();
+        lock.lock(); //받은 열쇠로 문 잠금
 
         try (
                 FileOutputStream fos = new FileOutputStream(path.toFile());
-                ObjectOutputStream oos = new ObjectOutputStream(fos)
+                ObjectOutputStream oos = new ObjectOutputStream(fos) //객체를 파일로 바꿔주는 도구
         ) {
             oos.writeObject(user);
         } catch (IOException e) {
